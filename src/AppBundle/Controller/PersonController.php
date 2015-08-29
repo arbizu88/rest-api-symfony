@@ -16,13 +16,15 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Session\Session;
 use AppBundle\Entity\Person;
+use AppBundle\Form\PersonType;
+use FOS\RestBundle\Controller\FOSRestController;
 
 /**
  * Event controller.
  *
  * @Route("/api/person")
  */
-class PersonController extends Controller
+class PersonController extends FOSRestController
 {
 
     /**
@@ -70,29 +72,32 @@ class PersonController extends Controller
     /**
      * @Route("/", name="create_person")
      * @Method("POST")
-     * @ParamConverter("post", class="AppBundle:Person")
-     * @return \Symfony\Component\HttpFoundation\JsonResponse
+     * @ParamConverter("person", converter="fos_rest.request_body")
      */
-    public function createPerson(Person $request)
+    public function createPerson(Person $person)
     {
+        $errors = $this->getErrors($person);
 
-        $session = $request->getSession();
-        echo $session;
-/*        $entity = new Person();
-        $form = $this->createForm($entity);
-        $form->handleRequest($request);
+        if(isset($errors)) {
+            return $this->view($errors, 400);
+        }
 
-        if ($form->isValid()) {
-            $em = $this->getDoctrine()->getManager();
-            $em->persist($entity);
-            $em->flush();
+        $em = $this->getDoctrine()->getManager();
+        $em->persist($person);
+        $em->flush();
 
-            //return $this->redirect($this->generateUrl('event_show', array('id' => $entity->getId())));
+        return $this->view($person, 200);
+    }
 
-            return new JsonResponse($entity);
-        }*/
+    private function getErrors ($entity){
+        $validator = $this->get('validator');
+        $errors = $validator->validate($entity);
+        
+        if (count($errors) > 0) {
+            return $errors;
+        }
 
-        return new JsonResponse($request);
+        return null;
     }
 
     /**

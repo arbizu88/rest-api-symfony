@@ -4,6 +4,7 @@ namespace AppBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Person
@@ -27,6 +28,7 @@ class Person
      * @var string
      *
      * @ORM\Column(name="name", type="string", length=255)
+     * @Assert\NotBlank()
      * @Groups({"group1", "group2"})
      */
     private $name;
@@ -52,6 +54,7 @@ class Person
      *
      * @ORM\Column(name="email", type="string", length=255)
      * @Groups({"group1", "group2"})
+     * @Assert\Email()
      */
     private $email;
 
