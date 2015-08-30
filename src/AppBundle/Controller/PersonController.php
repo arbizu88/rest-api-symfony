@@ -16,7 +16,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Session\Session;
 use AppBundle\Entity\Person;
-use AppBundle\Form\PersonType;
 use FOS\RestBundle\Controller\FOSRestController;
 
 /**
@@ -37,17 +36,7 @@ class PersonController extends FOSRestController
         $persons = $this->getDoctrine()->getRepository('AppBundle:Person')
             ->findAll();
 
-        $serializer = $this->get('jms_serializer');
-
-        /*Se puede utilizar serialize / normalize / denormalize
-        * dependiendo de lo que se necesite realizar
-        */
-        $json = $serializer->serialize(
-            $persons,
-            'json'
-        );
-
-        return new JsonResponse($json);
+        return $persons;
     }
 
 
@@ -57,16 +46,10 @@ class PersonController extends FOSRestController
      */
     public function getPerson($id)
     {
-        $persons = $this->getDoctrine()->getRepository('AppBundle:Person')
+        $person = $this->getDoctrine()->getRepository('AppBundle:Person')
             ->find($id);
-        $serializer = $this->get('jms_serializer');
 
-        $json = $serializer->serialize(
-            $persons,
-            'json'
-        );
-
-        return new JsonResponse($json);
+        return $person;
     }
 
     /**
@@ -103,26 +86,32 @@ class PersonController extends FOSRestController
     /**
      * @Route("/{id}", name="update_person")
      * @Method("PUT")
+     * @ParamConverter("person", converter="fos_rest.request_body")
      * @return \Symfony\Component\HttpFoundation\JsonResponse
      */
-    public function updatePerson(Request $request, Person $entity)
+    public function updatePerson($id, Person $person)
     {
-        try {
-            $em = $this->getDoctrine()->getManager();
-            $request->setMethod('PATCH'); //Treat all PUTs as PATCH
-            $form = $this->createForm(new PersonType(), $entity, array("method" => $request->getMethod()));
-            $this->removeExtraFields($request, $form);
-            $form->handleRequest($request);
-            if ($form->isValid()) {
-                $em->flush();
 
-                return $entity;
-            }
+        $em = $this->getDoctrine()->getManager();
+        $dbPerson = new Person();
+        $dbPerson = $this->getDoctrine()->getRepository('AppBundle:Person')->find($id);
 
-            return FOSView::create(array('errors' => $form->getErrors()), Codes::HTTP_INTERNAL_SERVER_ERROR);
-        } catch (\Exception $e) {
-            return FOSView::create($e->getMessage(), Codes::HTTP_INTERNAL_SERVER_ERROR);
+        $dbPerson->setName($person->getName());
+        $dbPerson->setAge($person->getAge());
+        $dbPerson->setEmail($person->getEmail());
+        $dbPerson->setLastName($person->getLastname());
+        $dbPerson->setTelephone($person->getTelephone());
+
+        $errors = $this->getErrors($person);
+
+        if (isset($errors)) {
+            return $this->view($errors, 400);
         }
+
+        $em->persist($dbPerson);
+        $em->flush();
+
+        return $dbPerson;
     }
 
     /**
